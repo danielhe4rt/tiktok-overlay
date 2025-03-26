@@ -1,0 +1,25 @@
+/* Styles for the clean overlay page */
+body, html {
+  background-color: transparent !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+/* Ensure the overlay has a small shadow to improve visibility on any background */
+.overlay-container {
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
+
+/* Animation for level ups */
+@keyframes level-up-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.level-up {
+  animation: level-up-pulse 0.5s ease-in-out;
+} 
