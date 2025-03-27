@@ -1,8 +1,14 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import {createServer} from 'http';
+import {Server} from 'socket.io';
 import cors from 'cors';
-import { createRequire } from 'module';
+import {createRequire} from 'module';
+import { PostHog } from 'posthog-node'
+
+const posthog = new PostHog(
+    'phc_MTyLVwHxKq8VEqjPK2zqzy2Fu4XlaR8CsvmRDP70HZA',
+    { host: 'https://us.i.posthog.com' }
+)
 
 // Create require function to load CommonJS modules
 const require = createRequire(import.meta.url);
@@ -67,13 +73,13 @@ function calculateLevel(xp) {
 function updateXP(additionalXP) {
   const newXP = gameState.currentXP + additionalXP;
   const newLevel = calculateLevel(newXP);
-  
+
   // Update game state
   gameState.currentXP = newXP;
-  
+
   if (newLevel !== gameState.level) {
     gameState.level = newLevel;
-    
+
     // Set max XP to the next level threshold
     const nextLevelIndex = LEVEL_THRESHOLDS.findIndex(threshold => threshold > newXP);
     if (nextLevelIndex !== -1) {
@@ -83,7 +89,7 @@ function updateXP(additionalXP) {
       gameState.maxXP = newXP + 1000;
     }
   }
-  
+
   // Broadcast updated state to all clients
   io.emit('gameStateUpdate', gameState);
 }
@@ -95,15 +101,17 @@ function connectToTikTok(username) {
     tiktokConnection.disconnect();
     tiktokConnection = null;
   }
-  
+
   // Update channel name and connection status
   gameState.channelName = username;
   gameState.isConnected = false;
   io.emit('gameStateUpdate', gameState);
-  
+
   // Create a new connection
-  tiktokConnection = new WebcastPushConnection(username);
-  
+  tiktokConnection = new WebcastPushConnection(username, {
+    enableExtendedGiftInfo: true
+  });
+
   // Connect to TikTok Live
   tiktokConnection.connect()
     .then(state => {
@@ -118,14 +126,26 @@ function connectToTikTok(username) {
       io.emit('gameStateUpdate', gameState);
       io.emit('connectionStatus', { connected: false, message: `Connection failed: ${err.message}` });
     });
-  
-  // Handle chat messages
-  tiktokConnection.on('chat', data => {
-    console.log(`[Chat] ${data.uniqueId}: ${data.comment}`);
-    
+
+
+  tiktokConnection.on('follow', data => {
+    console.log(`[Alerts] ${data.uniqueId} followed the stream!`);
+
+    posthog.capture({
+      distinctId: data.userId,
+      event: "follow",
+      properties: {
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
     // Add a small amount of XP for chat messages
     updateXP(10);
-    
+
     // Emit the chat message to clients
     io.emit('chatMessage', {
       uniqueId: data.uniqueId,
@@ -135,12 +155,97 @@ function connectToTikTok(username) {
   });
 
 
-  tiktokConnection.on('like', data => {
+  tiktokConnection.on('share', data => {
+    console.log(`[Alerts] ${data.uniqueId} just shared the stream!`);
+
+    posthog.capture({
+      distinctId: data.userId,
+      event: "share",
+      properties: {
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
+    // Add a small amount of XP for chat messages
+    updateXP(10);
+
+    // Emit the chat message to clients
+    io.emit('chatMessage', {
+      uniqueId: data.uniqueId,
+      comment: data.comment,
+      profilePictureUrl: data.profilePictureUrl
+    });
+  });
+
+  // Handle chat messages
+  tiktokConnection.on('chat', data => {
     console.log(`[Chat] ${data.uniqueId}: ${data.comment}`);
-    
+
+    posthog.capture({
+      distinctId: data.userId,
+      event: "message",
+      properties: {
+        message: data.comment,
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
+    // Add a small amount of XP for chat messages
+    updateXP(10);
+
+    // Emit the chat message to clients
+    io.emit('chatMessage', {
+      uniqueId: data.uniqueId,
+      comment: data.comment,
+      profilePictureUrl: data.profilePictureUrl
+    });
+  });
+
+  tiktokConnection.on('member', data => {
+    console.log(`[Room State] ${data.uniqueId} joined the stream!`);
+    posthog.capture({
+      distinctId: data.userId,
+      event: "$pageview",
+      properties: {
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
+
+  })
+
+  tiktokConnection.on('like', data => {
+    //console.log(data);
+    console.log(`[Events] ${data.uniqueId} Liked the stream! (${data.likeCount})`);
+    posthog.capture({
+      distinctId: data.userId,
+      event: "like",
+      properties: {
+        likes_count: data.likeCount,
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
+
     // Add a small amount of XP for chat messages
     updateXP(5);
-    
+
     // Emit the chat message to clients
     io.emit('chatMessage', {
       uniqueId: data.uniqueId,
@@ -149,19 +254,31 @@ function connectToTikTok(username) {
     });
   });
 
-  
   // Handle gifts
   tiktokConnection.on('gift', data => {
     console.log(`[Gift] ${data.uniqueId} sent gift ${data.giftId}`);
-    
+    posthog.capture({
+      distinctId: data.userId,
+      event: "gift",
+      properties: {
+        gift: data.extendedGiftInfo,
+        $current_url: 'https://tiktok.com/@danielhe4rt/live',
+        $set_once: {
+          name: data.nickname,
+          username: data.uniqueId,
+        }
+      }
+    })
+
+
     // Calculate XP based on gift value
     const giftXP = GIFT_XP_VALUES[data.giftId] || 1;
     // Multiply by repeat count for combo gifts
     const totalXP = giftXP * (data.repeatCount || 1);
-    
+
     // Update XP
     updateXP(totalXP);
-    
+
     // Emit the gift to clients
     io.emit('giftReceived', {
       uniqueId: data.uniqueId,
@@ -175,24 +292,24 @@ function connectToTikTok(username) {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('A client connected');
-  
+
   // Send current game state to the newly connected client
   socket.emit('gameStateUpdate', gameState);
-  
+
   // Handle connection requests
   socket.on('connectToTikTok', (data) => {
     const username = data.username || 'danielhe4rt';
     console.log(`Connection requested for TikTok user: ${username}`);
     connectToTikTok(username);
   });
-  
+
   // Handle manual XP updates (for testing)
   socket.on('addTestXP', (data) => {
     const xpToAdd = data.xp || 100;
     console.log(`Adding test XP: ${xpToAdd}`);
     updateXP(xpToAdd);
   });
-  
+
   // Handle disconnect
   socket.on('disconnect', () => {
     console.log('A client disconnected');
@@ -220,7 +337,7 @@ function startServer(port) {
       console.error('Server error:', err);
     }
   });
-  
+
   server.listen(port, () => {
     console.log(`Server running on port ${port}`);
     // Store the actual port being used for client reference

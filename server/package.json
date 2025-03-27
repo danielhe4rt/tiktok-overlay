@@ -10,6 +10,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "posthog-js": "^1.234.1",
+    "posthog-node": "^4.10.2",
     "socket.io": "^4.8.1",
     "tiktok-live-connector": "^1.2.3"
   }
