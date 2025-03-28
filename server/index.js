@@ -10,6 +10,8 @@ const posthog = new PostHog(
     { host: 'https://us.i.posthog.com' }
 )
 
+let live_id = process.argv.slice(2);
+
 // Create require function to load CommonJS modules
 const require = createRequire(import.meta.url);
 const { WebcastPushConnection } = require('tiktok-live-connector');
