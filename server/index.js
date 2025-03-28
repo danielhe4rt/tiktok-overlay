@@ -33,6 +33,7 @@ if (hour < 12) {
 
 const live_id = `${year}-${month}-${day}-${timeShift}`;
 
+console.log(`Livestream starting:  ${live_id}`);
 
 // Create require function to load CommonJS modules
 const require = createRequire(import.meta.url);
