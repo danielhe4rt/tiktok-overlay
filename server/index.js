@@ -10,7 +10,29 @@ const posthog = new PostHog(
     { host: 'https://us.i.posthog.com' }
 )
 
-let live_id = process.argv.slice(2);
+
+const now = new Date();
+
+const year = now.getFullYear();
+const month = (now.getMonth() + 1).toString().padStart(2, '0');
+const day = now.getDate().toString().padStart(2, '0');
+
+const hour = now.getHours();
+
+let timeShift = '';
+
+if (hour < 12) {
+  timeShift = 'morning';
+} else if (hour < 17) {
+  timeShift = 'afternoon';
+} else if (hour < 21) {
+  timeShift = 'evening';
+} else {
+  timeShift = 'night';
+}
+
+const live_id = `${year}-${month}-${day}-${timeShift}`;
+
 
 // Create require function to load CommonJS modules
 const require = createRequire(import.meta.url);
