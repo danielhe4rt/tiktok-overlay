@@ -137,6 +137,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "follow",
       properties: {
+        live: live_id,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
           name: data.nickname,
@@ -164,6 +165,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "share",
       properties: {
+        live: live_id,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
           name: data.nickname,
@@ -191,6 +193,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "message",
       properties: {
+        live: live_id,
         message: data.comment,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
@@ -217,6 +220,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "$pageview",
       properties: {
+        live: live_id,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
           name: data.nickname,
@@ -235,6 +239,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "like",
       properties: {
+        live: live_id,
         likes_count: data.likeCount,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
@@ -263,6 +268,7 @@ function connectToTikTok(username) {
       distinctId: data.userId,
       event: "gift",
       properties: {
+        live: live_id,
         gift: data.extendedGiftInfo,
         $current_url: 'https://tiktok.com/@danielhe4rt/live',
         $set_once: {
